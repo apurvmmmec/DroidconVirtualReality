@@ -234,6 +234,8 @@ public class VRRenderer implements CardboardView.StereoRenderer{
      */
     @Override
     public void onNewFrame(HeadTransform headTransform) {
+        // Build the Model part of the ModelView matrix.
+        Matrix.rotateM(modelCube, 0, TIME_DELTA, 0.5f, 0.5f, 1.0f);
 
         // Build the camera matrix and apply it to the ModelView.
         Matrix.setLookAtM(camera, 0, 0.0f, 0.0f, CAMERA_Z, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
