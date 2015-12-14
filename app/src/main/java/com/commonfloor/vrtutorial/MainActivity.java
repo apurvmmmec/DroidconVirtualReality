@@ -16,6 +16,7 @@ public class MainActivity extends CardboardActivity {
     private Vibrator vibrator;
 
     private VRRenderer mRenderer;
+    private CardboardOverlayView mOverlayView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,6 +31,8 @@ public class MainActivity extends CardboardActivity {
         setCardboardView(cardboardView);
 
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        mOverlayView = (CardboardOverlayView) findViewById(R.id.overlay);
+        mOverlayView.show3DToast("Pull the magnet when you find an object.");
 
     }
 
@@ -42,9 +45,10 @@ public class MainActivity extends CardboardActivity {
 
         if (mRenderer.isLookingAtObject()) {
             score++;
+            mOverlayView.show3DToast("Found it! Look around for another one.\nScore = " + score);
             mRenderer.hideObject();
         } else {
-
+            mOverlayView.show3DToast("Look around to find the object!");
         }
 
         // Always give user feedback.
