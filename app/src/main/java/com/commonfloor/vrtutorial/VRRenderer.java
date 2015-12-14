@@ -433,6 +433,35 @@ public class VRRenderer implements CardboardView.StereoRenderer{
         return Math.abs(pitch) < PITCH_LIMIT && Math.abs(yaw) < YAW_LIMIT;
     }
 
+    /**
+     * Find a new random position for the object.
+     *
+     * <p>We'll rotate it around the Y-axis so it's out of sight, and then up or down by a little bit.
+     */
+    public void hideObject() {
+        float[] rotationMatrix = new float[16];
+        float[] posVec = new float[4];
+
+        // First rotate in XZ plane, between 90 and 270 deg away, and scale so that we vary
+        // the object's distance from the user.
+        float angleXZ = (float) Math.random() * 180 + 90;
+        Matrix.setRotateM(rotationMatrix, 0, angleXZ, 0f, 1f, 0f);
+        float oldObjectDistance = objectDistance;
+        objectDistance = (float) Math.random() * 15 + 5;
+        float objectScalingFactor = objectDistance / oldObjectDistance;
+        Matrix.scaleM(rotationMatrix, 0, objectScalingFactor, objectScalingFactor,
+                objectScalingFactor);
+        Matrix.multiplyMV(posVec, 0, rotationMatrix, 0, modelCube, 12);
+
+        // Now get the up or down angle, between -20 and 20 degrees.
+        float angleY = (float) Math.random() * 80 - 40; // Angle in Y plane, between -40 and 40.
+        angleY = (float) Math.toRadians(angleY);
+        float newY = (float) Math.tan(angleY) * objectDistance;
+
+        Matrix.setIdentityM(modelCube, 0);
+        Matrix.translateM(modelCube, 0, posVec[0], newY, posVec[2]);
+    }
+
 
 
 }
