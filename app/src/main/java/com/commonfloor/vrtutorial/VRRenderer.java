@@ -28,6 +28,9 @@ public class VRRenderer implements CardboardView.StereoRenderer{
 
     private static final String TAG = "MainActivity";
 
+    private static final float YAW_LIMIT = 0.12f;
+    private static final float PITCH_LIMIT = 0.12f;
+
     private static final float CAMERA_Z = 0.01f;
     private static final float TIME_DELTA = 0.3f;
 
@@ -271,6 +274,12 @@ public class VRRenderer implements CardboardView.StereoRenderer{
         Matrix.multiplyMM(modelViewProjection, 0, perspective, 0, modelView, 0);
         drawCube();
 
+        // Set modelView for the floor, so we draw floor in the correct location
+        Matrix.multiplyMM(modelView, 0, view, 0, modelFloor, 0);
+        Matrix.multiplyMM(modelViewProjection, 0, perspective, 0,
+                modelView, 0);
+        drawFloor();
+
     }
 
 
@@ -305,10 +314,37 @@ public class VRRenderer implements CardboardView.StereoRenderer{
         // Set the normal positions of the cube, again for shading
         GLES20.glVertexAttribPointer(cubeNormalParam, 3, GLES20.GL_FLOAT, false, 0, cubeNormals);
         GLES20.glVertexAttribPointer(cubeColorParam, 4, GLES20.GL_FLOAT, false, 0,
-                cubeColors);
+                isLookingAtObject() ? cubeFoundColors : cubeColors);
 
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 36);
         checkGLError("Drawing cube");
+    }
+
+    /**
+     * Draw the floor.
+     *
+     * <p>This feeds in data for the floor into the shader. Note that this doesn't feed in data about
+     * position of the light, so if we rewrite our code to draw the floor first, the lighting might
+     * look strange.
+     */
+    public void drawFloor() {
+        GLES20.glUseProgram(floorProgram);
+
+        // Set ModelView, MVP, position, normals, and color.
+        GLES20.glUniform3fv(floorLightPosParam, 1, lightPosInEyeSpace, 0);
+        GLES20.glUniformMatrix4fv(floorModelParam, 1, false, modelFloor, 0);
+        GLES20.glUniformMatrix4fv(floorModelViewParam, 1, false, modelView, 0);
+        GLES20.glUniformMatrix4fv(floorModelViewProjectionParam, 1, false,
+                modelViewProjection, 0);
+        GLES20.glVertexAttribPointer(floorPositionParam, COORDS_PER_VERTEX, GLES20.GL_FLOAT,
+                false, 0, floorVertices);
+        GLES20.glVertexAttribPointer(floorNormalParam, 3, GLES20.GL_FLOAT, false, 0,
+                floorNormals);
+        GLES20.glVertexAttribPointer(floorColorParam, 4, GLES20.GL_FLOAT, false, 0, floorColors);
+
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 6);
+
+        checkGLError("drawing floor");
     }
 
     /**
@@ -376,6 +412,25 @@ public class VRRenderer implements CardboardView.StereoRenderer{
             Log.e(TAG, label + ": glError " + error);
             throw new RuntimeException(label + ": glError " + error);
         }
+    }
+
+    /**
+     * Check if user is looking at object by calculating where the object is in eye-space.
+     *
+     * @return true if the user is looking at the object.
+     */
+    public boolean isLookingAtObject() {
+        float[] initVec = { 0, 0, 0, 1.0f };
+        float[] objPositionVec = new float[4];
+
+        // Convert object space to camera space. Use the headView from onNewFrame.
+        Matrix.multiplyMM(modelView, 0, headView, 0, modelCube, 0);
+        Matrix.multiplyMV(objPositionVec, 0, modelView, 0, initVec, 0);
+
+        float pitch = (float) Math.atan2(objPositionVec[1], -objPositionVec[2]);
+        float yaw = (float) Math.atan2(objPositionVec[0], -objPositionVec[2]);
+
+        return Math.abs(pitch) < PITCH_LIMIT && Math.abs(yaw) < YAW_LIMIT;
     }
 
 
